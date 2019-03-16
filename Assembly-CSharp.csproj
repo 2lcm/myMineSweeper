@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Block.cs" />
+    <Compile Include="Assets\Camera.cs" />
     <Compile Include="Assets\GameManager.cs" />
     <Reference Include="Unity.TextMeshPro.Editor">
       <HintPath>D:/Dropbox/Tlcm/Unity/3DMineSweeper/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
