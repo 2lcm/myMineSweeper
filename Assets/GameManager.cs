@@ -9,7 +9,9 @@ public class GameManager : MonoBehaviour
     public int[] cubeInfo = new int[3];
     public GameObject[,,] blockArray;
     public int[] selectedIndex;
-    public Material[] mats = new Material[5];
+    // 0: basic, 1: transparent, 2: suspected, 3:mine, 4: selected
+    public Material[] mats = new Material[6];
+    public int numMines;
 
     // Create blocks by given information
     void CreateBlocks(int a, int b, int c)
@@ -19,6 +21,26 @@ public class GameManager : MonoBehaviour
 
         GameObject cam;
         blockArray = new GameObject[a, b, c];
+        bool[,,] mines = new bool[a, b, c];
+
+        // Set all mine location
+        System.Random r = new System.Random();
+        /*
+        while (true)
+        {
+            int cnt = 0;
+
+            if (cnt == numMines)
+            {
+                break;
+            }
+            if(!mines[r.Next(a), r.Next(b), r.Next(c)])
+            {
+                mines[r.Next(a), r.Next(b), r.Next(c)] = true;
+                cnt++;
+            }
+        }
+        */
 
         // Create blocks
         for (int i = 0; i < a; i++)
@@ -29,8 +51,15 @@ public class GameManager : MonoBehaviour
                 {
                     GameObject new_block = Instantiate(block, new Vector3(i, j, k), Quaternion.identity);
                     Block blk = new_block.GetComponent<Block>();
-                    blk.state = 0;
+                    blk.flag = false;
                     blk.selected = false;
+                    //blk.isMine = mines[i, j, k];
+                    blk.isMine = false;
+                    blk.discovered = false;
+                    blk.number = 0;
+                    if(0 < blk.number)
+                        blk.numText.GetComponent<TextMesh>().text = Convert.ToString(blk.number);
+                    blk.numText.SetActive(false);
                     SetBlockMaterial(new_block);
                     blockArray[i, j, k] = new_block;
                 }
@@ -71,31 +100,106 @@ public class GameManager : MonoBehaviour
         Debug.Log(debugLog);
         */
 
-        // 0 : basic, 1 : safe, 2 : suspected(flag), 3 : mine
         Block blk = block.GetComponent<Block>();
-        int state = blk.state;
 
-        if (blk.selected)
+        if (blk.discovered && blk.isMine)
         {
-            block.GetComponent<MeshRenderer>().material = mats[4];
             foreach (Transform child in block.transform)
             {
-                child.gameObject.GetComponent<MeshRenderer>().material = mats[4];
+                if(child.name != "Number")
+                {
+                    child.gameObject.GetComponent<MeshRenderer>().material = mats[3];
+                }
             }
         }
-        else
+        else if (blk.selected)
         {
-            if (state == 0)
+            
+            if (blk.discovered)
             {
-                block.GetComponent<MeshRenderer>().material = mats[1];
+                foreach (Transform child in block.transform)
+                {
+                    if (child.name == "Number")
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                    else if (child.name == "Body")
+                    {
+                        child.gameObject.SetActive(true);
+                        child.gameObject.GetComponent<MeshRenderer>().material = mats[4];
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                }
+            }
+            else if (blk.flag)
+            {
+                foreach (Transform child in block.transform)
+                {
+                    if (child.name != "Number")
+                    {
+                        child.gameObject.GetComponent<MeshRenderer>().material = mats[5];
+                    }
+                }
             }
             else
             {
-                block.GetComponent<MeshRenderer>().material = mats[state];
+                foreach (Transform child in block.transform)
+                {
+                    if (child.name != "Number")
+                    {
+                        child.gameObject.GetComponent<MeshRenderer>().material = mats[4];
+                    }
+                }
             }
+
+        }
+        else if (blk.discovered)
+        {
             foreach (Transform child in block.transform)
             {
-                child.gameObject.GetComponent<MeshRenderer>().material = mats[state];
+                if (child.name == "Number")
+                {
+                    child.gameObject.SetActive(true);
+                }
+                else if (child.name == "Body")
+                {
+                    child.gameObject.SetActive(true);
+                    child.gameObject.GetComponent<MeshRenderer>().material = mats[1];
+                }
+                else
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+        }
+        else if (blk.flag)
+        {
+            foreach (Transform child in block.transform)
+            {
+                if (child.name != "Number")
+                {
+                    child.gameObject.GetComponent<MeshRenderer>().material = mats[2];
+                }
+            }
+        }
+        else // No select, No discovered, No flag => basic
+        {
+            foreach (Transform child in block.transform)
+            {
+                if (child.name != "Number")
+                {
+                    if (child.name == "Body")
+                    {
+                        child.gameObject.GetComponent<MeshRenderer>().material = mats[1];
+                    }
+                    else
+                    {
+                        child.gameObject.GetComponent<MeshRenderer>().material = mats[0];
+                    }
+                }
             }
         }
     }
@@ -130,6 +234,18 @@ public class GameManager : MonoBehaviour
             {
                 SelectBlock(selectedIndex[0], selectedIndex[1] - 1, selectedIndex[2]);
             }
+            else if (Input.GetKeyDown(KeyCode.Space))
+            {
+                GameObject flagBlock = blockArray[selectedIndex[0], selectedIndex[1], selectedIndex[2]];
+                flagBlock.GetComponent<Block>().flag = !flagBlock.GetComponent<Block>().flag;
+                SetBlockMaterial(flagBlock);
+            }
+            else if (Input.GetKeyDown(KeyCode.Return))
+            {
+                GameObject discoverBlock = blockArray[selectedIndex[0], selectedIndex[1], selectedIndex[2]];
+                discoverBlock.GetComponent<Block>().discovered = true;
+                SetBlockMaterial(discoverBlock);
+            }
         }
         catch(IndexOutOfRangeException e)
         {
@@ -140,11 +256,13 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Debug.Log("GameManager start");
         // Basic setting
         Screen.SetResolution(640, 960, false);
 
-        cubeInfo = new int[3] { 5, 5, 5 };
+        cubeInfo = new int[3] { 4, 4, 4 };
         selectedIndex = new int[3] { 0, 0, 0 };
+        numMines = 3;
 
         for (int i = 0; i < 3; i++)
         {

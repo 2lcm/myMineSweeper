@@ -1,14 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Block : MonoBehaviour
 {
-    int number;
-    // 0 : basic, 1 : safe, 2 : suspected(flag), 3 : mine
-    public int state;
+    public int number;
+    public bool flag;
     public bool selected;
-
+    public bool isMine;
+    public bool discovered;
+    public GameObject numText;
+    
     // Start is called before the first frame update
     void Start()
     {
